@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">KVStore</string>
+    <string name="key">Key</string>
+    <string name="value">Value</string>
+    <string name="done">Save</string>
+    <string name="error_message_empty_field">Field can not be empty</string>
+    <string name="string_value"> <b>Value -:</b> %1$s .</string>
+    <string name="string_key"> <b>Key -:</b> %1$s .</string>
+</resources>

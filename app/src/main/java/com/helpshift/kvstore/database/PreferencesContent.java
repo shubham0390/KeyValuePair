@@ -29,10 +29,6 @@ public class PreferencesContent implements PreferencesColumns {
 
     public static final String KEY_PREFERENCE_NAME = "preferenceName";
 
-    public static String mProviderAuthority;
-
-    public static Uri BASE_CONTENT_URI;
-
     public static String createTableQuery() {
         return "CREATE TABLE IF NOT EXISTS" + TABLE_NAME
                 + "("
@@ -41,29 +37,14 @@ public class PreferencesContent implements PreferencesColumns {
                 + COLUMN_NAME_VALUE + " TEXT NOT NULL );";
     }
 
-    public static void createTableQuery(Context context, String tableName) {
+    public static void createTableQuery(String tableName, SQLiteDatabase sqLiteDatabase) {
         String s = "CREATE TABLE IF NOT EXISTS " + tableName
                 + "("
                 + _ID + " INTEGER PRIMARY KEY AUTOINCREMENT , "
                 + COLUMN_NAME_KEY + " TEXT NOT NULL,"
                 + COLUMN_NAME_VALUE + " TEXT NOT NULL );";
-        SQLiteDatabaseHelper sqLiteDatabaseHelper = null;
-        SQLiteDatabase sqLiteDatabase = null;
-        try {
-            sqLiteDatabaseHelper = new SQLiteDatabaseHelper(context);
-            sqLiteDatabase = sqLiteDatabaseHelper.getWritableDatabase();
-            sqLiteDatabase.execSQL(s);
-        } finally {
-            if (sqLiteDatabase != null)
-                sqLiteDatabase.close();
-            if (sqLiteDatabaseHelper != null)
-                sqLiteDatabaseHelper.close();
-        }
+        sqLiteDatabase.execSQL(s);
     }
 
-    public static void setProviderAuthority(String packageName) {
-        mProviderAuthority = packageName + "." + PreferencesProvider.class.getSimpleName();
-        BASE_CONTENT_URI = Uri.EMPTY.buildUpon().scheme(ContentResolver.SCHEME_CONTENT).authority(mProviderAuthority)
-                .build();
-    }
+
 }

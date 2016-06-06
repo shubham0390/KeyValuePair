@@ -50,7 +50,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         mPreferenceAdapter = new PreferenceAdapter(this, R.layout.layout_list_item);
         mListView.setAdapter(mPreferenceAdapter);
         getSupportLoaderManager().restartLoader(1, null, this).forceLoad();
-        SharedPreferencesContext.getInstance().getSharedPreference(getApplicationContext())
+        SharedPreferencesContext.getInstance(getApplicationContext()).getSharedPreference(getApplicationContext())
                 .registerOnSharedPreferenceChangeListener(new SharedPreferences.OnSharedPreferenceChangeListener() {
                     @Override
                     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
@@ -73,7 +73,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 mValueEditText.setError(getString(R.string.error_message_empty_field));
                 return;
             }
-            SharedPreferences sharedPreferences = SharedPreferencesContext.getInstance().getSharedPreference(getApplicationContext());
+            SharedPreferences sharedPreferences = SharedPreferencesContext.getInstance(getApplicationContext()).getSharedPreference(getApplicationContext());
             sharedPreferences.edit().putString(key, value).apply();
         }
     };

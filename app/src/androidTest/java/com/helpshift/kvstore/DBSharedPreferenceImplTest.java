@@ -16,8 +16,9 @@ package com.helpshift.kvstore;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.test.AndroidTestCase;
+import android.test.IsolatedContext;
 import android.test.ProviderTestCase2;
-import android.test.RenamingDelegatingContext;
 import android.test.mock.MockContentResolver;
 import android.util.Log;
 
@@ -25,44 +26,28 @@ import java.util.Map;
 import java.util.Set;
 
 
-public class DBSharedPreferenceImplTest extends ProviderTestCase2<MockSharedPreferenceProvider> {
+public class DBSharedPreferenceImplTest extends AndroidTestCase {
 
 
     private SharedPreferences sharedPreferences;
-    private MockSharedPreferenceProvider mProvider;
 
-    /**
-     * Constructor.
-     */
-    public DBSharedPreferenceImplTest() {
-        super(MockSharedPreferenceProvider.class, "com.helpshift.kvstore.PreferencesProvider");
-    }
-
-    @Override
-    protected void setUp() throws Exception {
-
-    }
-
-    @Override
-    public void tearDown() throws Exception {
-    }
 
     public void testGetString() {
-        setupProvider();
-        mProvider.addQueryResult("key1", "value1");
+        setupPreference();
+        sharedPreferences.edit().putString("key1", "value1").apply();
         String value = sharedPreferences.getString("key1", "");
         assertEquals("value1", value);
     }
 
     public void testSaveValue() {
-        setupProvider();
+        setupPreference();
         sharedPreferences.edit().putString("key1", "value1").apply();
         String value = sharedPreferences.getString("key1", "");
         assertEquals("value1", value);
     }
 
     public void testUpdate() {
-        setupProvider();
+        setupPreference();
         sharedPreferences.edit().putString("key1", "value1").apply();
         String value = sharedPreferences.getString("key1", "");
         assertEquals("value1", value);
@@ -71,18 +56,15 @@ public class DBSharedPreferenceImplTest extends ProviderTestCase2<MockSharedPref
         assertEquals("value2", value2);
     }
 
-    private void setupProvider() {
-        mProvider = new MockSharedPreferenceProvider();
+    private void setupPreference() {
         MockContentResolver mockContentResolver = new MockContentResolver();
-        mockContentResolver.addProvider("com.helpshift.kvstore.PreferencesProvider", mProvider);
-        ContextWithMockContentResolver mContext = new ContextWithMockContentResolver(getContext());
-        mContext.setContentResolver(mockContentResolver);
-        sharedPreferences = SharedPreferencesContext.getInstance().getSharedPreference(mContext);
+        ContextWithMockContentResolver mContext = new ContextWithMockContentResolver(mockContentResolver, getContext());
+        sharedPreferences = SharedPreferencesContext.getInstance(getContext()).getSharedPreference(mContext);
     }
 
 
     public void testWithMultipleThread() {
-        setupProvider();
+        setupPreference();
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -115,21 +97,12 @@ public class DBSharedPreferenceImplTest extends ProviderTestCase2<MockSharedPref
         }).start();
     }
 
-    public class ContextWithMockContentResolver extends RenamingDelegatingContext {
-        private ContentResolver contentResolver;
+    public class ContextWithMockContentResolver extends IsolatedContext {
 
-        public void setContentResolver(ContentResolver contentResolver) {
-            this.contentResolver = contentResolver;
+        public ContextWithMockContentResolver(ContentResolver resolver, Context targetContext) {
+            super(resolver, targetContext);
         }
 
-        public ContextWithMockContentResolver(Context targetContext) {
-            super(targetContext, "test");
-        }
-
-        @Override
-        public ContentResolver getContentResolver() {
-            return contentResolver;
-        }
 
         @Override
         public Context getApplicationContext() {

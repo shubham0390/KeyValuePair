@@ -15,8 +15,10 @@ package com.helpshift.kvstore;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.database.sqlite.SQLiteDatabase;
 
 import com.helpshift.kvstore.database.PreferencesContent;
+import com.helpshift.kvstore.database.SQLiteDatabaseHelper;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,7 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class SharedPreferencesContext {
 
-    private static final SharedPreferencesContext mPreferencesContext = new SharedPreferencesContext();
+    private final SQLiteDatabase mSqlDatabase;
+    private static SharedPreferencesContext mPreferencesContext;
 
     private Map<String, SharedPreferences> mSharedPreferences = new ConcurrentHashMap<>();
 
@@ -33,8 +36,21 @@ public class SharedPreferencesContext {
      *
      * @return {@link SharedPreferencesContext}.
      */
-    public static SharedPreferencesContext getInstance() {
+    public static SharedPreferencesContext getInstance(Context context) {
+
+        if (mPreferencesContext == null) {
+            synchronized (SharedPreferencesContext.class) {
+                if (mPreferencesContext == null) {
+                    mPreferencesContext = new SharedPreferencesContext(context);
+                }
+            }
+        }
         return mPreferencesContext;
+    }
+
+    private SharedPreferencesContext(Context context) {
+        SQLiteDatabaseHelper helper = new SQLiteDatabaseHelper(context);
+        mSqlDatabase = helper.getWritableDatabase();
     }
 
     /**
@@ -59,6 +75,18 @@ public class SharedPreferencesContext {
         }
     }
 
+    /**
+     * Retrieve and hold the contents of the preferences  'preferenceName', returning
+     * a SharedPreferences through which you can retrieve and modify its
+     * values.  Only one instance of the SharedPreferences object is returned
+     * to any callers for the same name, meaning they will see each other's
+     * edits as soon as they are made.
+     *
+     * @param context - application context {@link Context}
+     * @return The single {@link SharedPreferences} instance that can be used
+     * to retrieve and modify the preference values.
+     */
+
     public synchronized SharedPreferences getSharedPreference(Context context) {
         if (mSharedPreferences.containsKey(PreferencesContent.TABLE_NAME)) {
             return mSharedPreferences.get(PreferencesContent.TABLE_NAME);
@@ -70,8 +98,7 @@ public class SharedPreferencesContext {
     private SharedPreferences getPreference(Context context, String preferenceName) {
         SharedPreferences sharedPreferences = null;
         synchronized (this) {
-            PreferencesContent.setProviderAuthority(context.getPackageName());
-            sharedPreferences = new SharedPreferencesImpl(context, preferenceName);
+            sharedPreferences = new SharedPreferencesImpl(preferenceName,mSqlDatabase);
             mSharedPreferences.put(preferenceName, sharedPreferences);
         }
         return sharedPreferences;

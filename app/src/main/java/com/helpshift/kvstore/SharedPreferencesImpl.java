@@ -13,21 +13,19 @@
 
 package com.helpshift.kvstore;
 
-import android.content.ContentProviderOperation;
-import android.content.ContentProviderResult;
-import android.content.Context;
-import android.content.OperationApplicationException;
+import android.content.ContentValues;
 import android.content.SharedPreferences;
 import android.database.Cursor;
-import android.net.Uri;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
-import android.os.RemoteException;
 import android.util.Log;
 
-import com.helpshift.kvstore.database.PreferencesColumns;
 import com.helpshift.kvstore.database.PreferencesContent;
 
-import java.util.ArrayList;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -46,21 +44,18 @@ public class SharedPreferencesImpl implements SharedPreferences {
 
     private final Set<String> mModifiedKeys = Collections.synchronizedSet(new HashSet<String>());
 
+    private SQLiteDatabase mSqLiteDatabase;
 
     private static final Object mContent = new Object();
 
-    private Context mContext;
-
-    private final Uri mContentUri;
+    private String mPreferenceName;
 
     private final WeakHashMap<OnSharedPreferenceChangeListener, Object> mListeners = new WeakHashMap<>();
 
-    public SharedPreferencesImpl(Context context, String preferenceName) {
-        mContext = context;
-        mContentUri = PreferencesContent.BASE_CONTENT_URI.buildUpon().appendPath("preference")
-                .appendQueryParameter(PreferencesContent.KEY_PREFERENCE_NAME, preferenceName)
-                .build();
-        PreferencesContent.createTableQuery(mContext, preferenceName);
+    public SharedPreferencesImpl(String preferenceName, SQLiteDatabase sqlDatabase) {
+        mSqLiteDatabase = sqlDatabase;
+        mPreferenceName = preferenceName;
+        PreferencesContent.createTableQuery(preferenceName, mSqLiteDatabase);
     }
 
     public void registerOnSharedPreferenceChangeListener(OnSharedPreferenceChangeListener listener) {
@@ -80,8 +75,8 @@ public class SharedPreferencesImpl implements SharedPreferences {
     public Map<String, ?> getAll() {
         Cursor cursor = null;
         try {
-            cursor = mContext.getContentResolver().query(mContentUri, PreferencesContent.PREFERENCES_PROJECTION,
-                    null, null, null);
+            String selectAllQuery = "SELECT * FROM " + mPreferenceName;
+            cursor = mSqLiteDatabase.rawQuery(selectAllQuery, null);
             if (cursor != null) {
                 while (cursor.moveToNext()) {
                     parseSettingCursor(cursor);
@@ -190,10 +185,11 @@ public class SharedPreferencesImpl implements SharedPreferences {
     }
 
     private boolean checkIfKeyAlreadyExists(String key) {
-        Cursor cursor = mContext.getContentResolver().query(mContentUri,
-                PreferencesContent.PREFERENCES_PROJECTION,
-                PreferencesContent.SELECTION_VAI_KEY, new String[]{key}, null);
+
+        Cursor cursor = null;
         try {
+            cursor = mSqLiteDatabase.query(mPreferenceName, PreferencesContent.PREFERENCES_PROJECTION,
+                    PreferencesContent.SELECTION_VAI_KEY, new String[]{key}, null, null, null);
             if (cursor != null && cursor.moveToNext()) {
                 return true;
             }
@@ -213,8 +209,8 @@ public class SharedPreferencesImpl implements SharedPreferences {
     private void updateMapWithValueByKey(String key) {
         Cursor cursor = null;
         try {
-            cursor = mContext.getContentResolver().query(mContentUri, PreferencesContent.PREFERENCES_PROJECTION,
-                    PreferencesContent.SELECTION_VAI_KEY, new String[]{key}, null);
+            cursor = mSqLiteDatabase.query(mPreferenceName, PreferencesContent.PREFERENCES_PROJECTION,
+                    PreferencesContent.SELECTION_VAI_KEY, new String[]{key}, null, null, null);
             if (cursor != null && cursor.moveToNext()) {
                 parseSettingCursor(cursor);
             }
@@ -305,9 +301,8 @@ public class SharedPreferencesImpl implements SharedPreferences {
 
         @Override
         protected Void doInBackground(Void... params) {
-            ArrayList<ContentProviderOperation> mContentProviderOperations = new ArrayList<>();
+            mSqLiteDatabase.beginTransaction();
             for (Map.Entry<String, String> entry : mModifiedMap.entrySet()) {
-                ContentProviderOperation.Builder builder;
                 /*Add key to modified key */
                 mModifiedKeys.add(entry.getKey());
                 /*if map contains key mean we have to update or delete*/
@@ -316,56 +311,45 @@ public class SharedPreferencesImpl implements SharedPreferences {
                     /*If value of any key is missing we are treating it as removed */
                     if (entry.getValue() == null) {
                         Log.d(getClass().getSimpleName(), "Delete operations");
-                        builder = ContentProviderOperation.newDelete(mContentUri);
+                        mSqLiteDatabase.delete(mPreferenceName, PreferencesContent.SELECTION_VAI_KEY, new String[]{entry.getKey()});
                         mMap.remove(entry.getKey());
                     } else {
                         Log.d(getClass().getSimpleName(), "update operations");
-                        builder = ContentProviderOperation.newUpdate(mContentUri);
+                        ContentValues contentValues = new ContentValues();
+                        contentValues.put(PreferencesContent.COLUMN_NAME_KEY, entry.getKey());
+                        contentValues.put(PreferencesContent.COLUMN_NAME_VALUE, entry.getValue());
+                        mSqLiteDatabase.update(mPreferenceName, contentValues, PreferencesContent.SELECTION_VAI_KEY,
+                                new String[]{entry.getKey()});
                         mMap.put(entry.getKey(), entry.getValue());
                     }
-                    /*Adding a selection */
-                    builder.withSelection(PreferencesColumns.COLUMN_NAME_KEY + " =?",
-                            new String[]{entry.getKey()});
                 } else {
                     Log.d(getClass().getSimpleName(), "new operations");
-                    builder = ContentProviderOperation.newInsert(mContentUri);
+                    ContentValues contentValues = new ContentValues();
+                    contentValues.put(PreferencesContent.COLUMN_NAME_KEY, entry.getKey());
+                    contentValues.put(PreferencesContent.COLUMN_NAME_VALUE, entry.getValue());
+                    mSqLiteDatabase.insert(mPreferenceName, "foo", contentValues);
                     mMap.put(entry.getKey(), entry.getValue());
+                    try {
+                        JSONObject jsonObject =  new JSONObject("");
+                        JSONArray jsonArray = jsonObject.getJSONArray("Employee");
+                        for (int i = 0; i < jsonArray.length(); i++) {
+                            JSONObject empObject = jsonArray.getJSONObject(i);
+                            empObject.getInt("id");
+                            empObject.getString("name");
+                            empObject.getInt("salary");
+                        }
+
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+
+
                 }
-
-                builder.withValue(PreferencesColumns.COLUMN_NAME_KEY, entry.getKey());
-                builder.withValue(PreferencesColumns.COLUMN_NAME_VALUE, entry.getValue());
-                mContentProviderOperations.add(builder.build());
             }
-            /*Committing all setting to database*/
-            try {
-                ContentProviderResult[] contentProviderResult = mContext.getContentResolver().applyBatch(PreferencesContent
-                        .mProviderAuthority, mContentProviderOperations);
-
-                handleProviderResult(contentProviderResult);
-            } catch (OperationApplicationException e) {
-                Log.d(SharedPreferencesImpl.class.getName(), "Commit failed " + e.getMessage());
-            } catch (RemoteException e) {
-                Log.d(SharedPreferencesImpl.class.getName(), "Commit failed " + e.getMessage());
-            }
+            mSqLiteDatabase.endTransaction();
+            notifyListeners();
             return null;
         }
-
-    }
-
-    private void handleProviderResult(ContentProviderResult[] contentProviderResult) {
-        if (contentProviderResult.length <= 0) {
-            return;
-        }
-        int i = 0;
-            /*if result does not have count and uri that means database operation has failed*/
-        for (ContentProviderResult result : contentProviderResult) {
-            if (result == null || result.count == null || result.uri == null) {
-                mModifiedKeys.remove(i);
-                i++;
-            }
-        }
-        notifyListeners();
-        mModifiedMap.clear();
     }
 
     private void notifyListeners() {

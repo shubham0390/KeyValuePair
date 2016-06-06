@@ -37,7 +37,7 @@ public class PreferenceLoader extends AsyncTaskLoader<Map<String, String>> {
 
     @Override
     public Map<String, String> loadInBackground() {
-        return (Map<String, String>) SharedPreferencesContext.getInstance().getSharedPreference(getContext()).getAll();
+        return (Map<String, String>) SharedPreferencesContext.getInstance(getContext()).getSharedPreference(getContext()).getAll();
     }
 
     @Override

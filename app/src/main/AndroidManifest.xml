@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.helpshift.kvstore">
+<uses-permission android:name="android.permission.READ_CONTACTS"/>
+    <uses-permission android:name="android.permission.WRITE_CONTACTS"/>
+    <permission android:name="com.xxx.ContentProvider"
+        android:protectionLevel="signature"
+         android:description="@string/app_name"/>
 
     <application
         android:name=".CustomApplication"
@@ -17,9 +22,6 @@
             </intent-filter>
         </activity>
 
-        <provider
-            android:name=".database.PreferencesProvider"
-            android:authorities="com.helpshift.kvstore.PreferencesProvider" />
     </application>
 
 </manifest>

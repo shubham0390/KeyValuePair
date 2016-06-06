@@ -19,9 +19,12 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 
 public class SQLiteDatabaseHelper extends SQLiteOpenHelper {
+    public static final String DATABASE_NAME = "app_settings.db";
+
+    public static final int DATABASE_VERSION = 1;
 
     public SQLiteDatabaseHelper(Context context) {
-        super(context, PreferencesProvider.DATABASE_NAME, null, PreferencesProvider.DATABASE_VERSION);
+        super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
 
     @Override
